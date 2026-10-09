@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IPC marzo 2026: variación mensual por división de gasto</title>
+<style>
+:root{--bg:#fff;--ink:#000;--muted:#555;--red:#d0021b;--pos:#e58a93;--neg:#111;color-scheme:light;box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:28px 20px 40px}
+h1{margin:0 0 6px;padding-top:12px;border-top:5px solid var(--red);font:700 27px/1.15 Georgia,"Times New Roman",serif}
+.sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.card{border-left:5px solid var(--red);background:#f6f6f6;padding:12px 14px;margin-bottom:16px;min-height:78px}
+.card b{display:block;font:700 30px Georgia,serif;line-height:1.1}
+.card .n{font-size:14px;font-weight:700;margin-bottom:2px}
+.card span{font-size:13px;color:var(--muted)}
+.ctl{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:14px}
+.grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.grp small{font-size:12px;color:var(--muted);margin-right:2px}
+.pill{background:#fff;border:1px solid #000;border-radius:999px;padding:4px 12px;font-size:13px}
+.pill[aria-pressed=true]{background:var(--red);border-color:var(--red);color:#fff}
+.plot{position:relative;padding-bottom:24px}
+.gl{position:absolute;top:0;bottom:24px;width:1px;background:#e2e2e2;pointer-events:none}
+.gl.z{background:#000}
+.tk{position:absolute;bottom:0;transform:translateX(-50%);font-size:12px;color:var(--muted)}
+.r{display:block;width:100%;background:none;border:0;padding:5px 0 3px;text-align:left;position:relative}
+.r:hover,.r:focus-visible{background:rgba(0,0,0,.04);outline:none}
+.lb{display:block;font-size:13px;margin-bottom:3px;position:relative}
+.r.on .lb{font-weight:700}
+.tr{display:block;position:relative;height:20px}
+.bar{position:absolute;top:0;height:100%;background:var(--pos);transform:scaleX(0);transition:transform .6s cubic-bezier(.2,.7,.2,1),background .15s}
+.bar.p{transform-origin:left}.bar.q{transform-origin:right;background:var(--neg)}
+.go .bar{transform:scaleX(1)}
+.r.on .bar.p{background:var(--red)}.r.on .bar.q{background:var(--red)}
+.v{position:absolute;top:1px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:13px;color:var(--muted);margin:14px 0 0;line-height:1.5}
+.note b{color:var(--ink)}
+.src{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.bar{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>IPC marzo 2026: variación mensual por división de gasto</h1>
+  <p class="sub">Variación mensual (%). Toca o pasa el cursor sobre una barra.</p>
+  <div class="card" id="card" role="status"></div>
+  <div class="ctl">
+    <div class="grp"><small>Orden</small><span id="gs"></span></div>
+    <div class="grp"><small>Mostrar</small><span id="gf"></span></div>
+  </div>
+  <div class="plot" id="plot"></div>
+  <p class="note" id="note"></p>
+  <div class="src">Fuente: DANE.</div>
+</div>
+<script>
+(function(){
+var D=[["Información y comunicación",2.96],["Alimentos y bebidas no alcohólicas",1.27],["Salud",1.06],["Bienes y servicios diversos",0.95],["Bienes y servicios para el hogar",0.90],["Recreación y cultura",0.88],["Restaurantes y hoteles",0.86],["Alojamiento, agua, electricidad y gas",0.85],["Prendas de vestir y calzado",0.19],["Educación",0.17],["Transporte",-0.22],["Bebidas alcohólicas y tabaco",-0.37]]
+ .map(function(x){return{n:x[0],v:x[1]}});
+var RANK=D.slice().sort((a,b)=>b.v-a.v).map(x=>x.n);
+var MIN=-1,MAX=3.6,TICKS=[-1,0,1,2,3];
+var S={sort:"desc",flt:"all",sel:D[0].n};
+var f=n=>n.toFixed(2).replace(".",","),pos=x=>(x-MIN)/(MAX-MIN)*100;
+var $=id=>document.getElementById(id);
+var SORTS=[["desc","Mayor a menor"],["asc","Menor a mayor"],["az","A–Z"]],FLT=[["all","Todas"],["up","Suben"],["down","Bajan"]];
+function pills(el,list,k){
+  $(el).innerHTML=list.map(p=>'<button class="pill" data-k="'+k+'" data-v="'+p[0]+'" aria-pressed="'+(S[k]===p[0])+'">'+p[1]+"</button>").join(" ");
+}
+function show(n){
+  var x=D.find(d=>d.n===n),i=RANK.indexOf(n)+1;
+  $("card").innerHTML='<div class="n">'+x.n+"</div><b>"+f(x.v)+" %</b><span>"+(x.v>0?"Subió":x.v<0?"Bajó":"Sin cambio")+" en el mes · puesto "+i+" de "+D.length+" (de mayor a menor)</span>";
+}
+function list(){
+  var a=D.filter(d=>S.flt==="all"||(S.flt==="up"?d.v>0:d.v<0));
+  a.sort((p,q)=>S.sort==="asc"?p.v-q.v:S.sort==="az"?p.n.localeCompare(q.n,"es"):q.v-p.v);
+  return a;
+}
+function render(){
+  pills("gs",SORTS,"sort");pills("gf",FLT,"flt");
+  var a=list(),h="";
+  TICKS.forEach(t=>{h+='<div class="gl'+(t===0?" z":"")+'" style="left:'+pos(t)+'%"></div><span class="tk" style="left:'+pos(t)+'%">'+String(t).replace("-","−")+"</span>"});
+  h+=a.map(d=>{
+    var neg=d.v<0,l=pos(Math.min(0,d.v)),w=Math.abs(d.v)/(MAX-MIN)*100;
+    var vs=neg?"right:"+(100-pos(d.v)+1)+"%":"left:"+(pos(d.v)+1)+"%";
+    return '<button class="r'+(d.n===S.sel?" on":"")+'" data-n="'+d.n+'"><span class="lb">'+d.n+'</span><span class="tr"><span class="bar '+(neg?"q":"p")+'" style="left:'+l+"%;width:"+w+'%"></span><span class="v" style="'+vs+'">'+f(d.v)+"</span></span></button>";
+  }).join("");
+  var p=$("plot");p.classList.remove("go");p.innerHTML=h;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>p.classList.add("go")));
+  var up=D.filter(d=>d.v>0).length,dn=D.length-up;
+  $("note").innerHTML="<b>"+RANK[0]+"</b> tuvo la mayor variación mensual ("+f(D[0].v)+" %); <b>"+RANK[RANK.length-1]+"</b>, la menor ("+f(D[D.length-1].v)+" %). "+up+" divisiones subieron y "+dn+" bajaron.";
+  show(S.sel);
+}
+document.addEventListener("click",e=>{
+  var b=e.target.closest(".pill");
+  if(b){S[b.dataset.k]=b.dataset.v;render();return}
+  var r=e.target.closest(".r");
+  if(r){S.sel=r.dataset.n;document.querySelectorAll(".r").forEach(x=>x.classList.toggle("on",x===r));show(S.sel)}
+});
+function hov(e){var r=e.target.closest(".r");if(r)show(r.dataset.n)}
+var pl=$("plot");
+pl.addEventListener("mouseover",hov);pl.addEventListener("focusin",hov);
+pl.addEventListener("mouseleave",()=>show(S.sel));
+pl.addEventListener("focusout",()=>show(S.sel));
+render();
+})();
+</script>
+</body>
+</html>
